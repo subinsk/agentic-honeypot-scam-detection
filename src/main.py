@@ -109,11 +109,11 @@ def honeypot(req: HoneyPotRequest) -> AgentOutput:
     return AgentOutput(status="success", reply=reply)
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def root():
     return {"status": "ok"}
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
