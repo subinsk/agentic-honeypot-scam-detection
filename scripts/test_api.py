@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 load_dotenv(ROOT / ".env")
 
 import httpx
+import time
 
 BASE = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
 API_KEY = os.environ.get("API_SECRET_KEY", "your-secret-api-key-change-in-production")
@@ -28,7 +29,7 @@ def main() -> int:
 
     print("1. GET /health")
     try:
-        r = httpx.get(f"{BASE}/health", timeout=5)
+        r = httpx.get(f"{BASE}/health", timeout=None)
         r.raise_for_status()
         print("   OK:", r.json())
     except httpx.HTTPStatusError as e:
@@ -46,13 +47,13 @@ def main() -> int:
         "message": {
             "sender": "scammer",
             "text": "Your bank account will be blocked today. Verify immediately.",
-            "timestamp": 1770005528731,
+            "timestamp": int(time.time() * 1000),
         },
         "conversationHistory": [],
         "metadata": {"channel": "SMS", "language": "English", "locale": "IN"},
     }
     try:
-        r = httpx.post(f"{BASE}/", json=body1, headers=headers, timeout=30)
+        r = httpx.post(f"{BASE}/", json=body1, headers=headers, timeout=None)
         r.raise_for_status()
         out = r.json()
         print("   OK:", out)
@@ -79,16 +80,16 @@ def main() -> int:
         "message": {
             "sender": "scammer",
             "text": "Share your UPI ID to avoid account suspension.",
-            "timestamp": 1770005528731,
+            "timestamp": int(time.time() * 1000),
         },
         "conversationHistory": [
-            {"sender": "scammer", "text": body1["message"]["text"], "timestamp": 1770005528731},
-            {"sender": "user", "text": out.get("reply", "Why?"), "timestamp": 1770005528731},
+            {"sender": "scammer", "text": body1["message"]["text"], "timestamp": int(time.time() * 1000)},
+            {"sender": "user", "text": out.get("reply", "Why?"), "timestamp": int(time.time() * 1000)},
         ],
         "metadata": {"channel": "SMS", "language": "English", "locale": "IN"},
     }
     try:
-        r = httpx.post(f"{BASE}/", json=body2, headers=headers, timeout=30)
+        r = httpx.post(f"{BASE}/", json=body2, headers=headers, timeout=None)
         r.raise_for_status()
         out2 = r.json()
         print("   OK:", out2)
@@ -107,15 +108,48 @@ def main() -> int:
         print("   FAIL:", e)
         return 1
 
-    print("\n4. POST / (no scam - expect empty reply)")
+    print("\n4. POST / (scam with extractable data: UPI, bank, phone, link)")
+    # Mock scammer message that contains data we extract per spec (bankAccounts, upiIds, phoneNumbers, phishingLinks, suspiciousKeywords)
+    body_extract = {
+        "sessionId": "test-session-extract",
+        "message": {
+            "sender": "scammer",
+            "text": "Urgent: Send payment to 1234-5678-9012 or UPI scammer@paytm. Call +919876543210 or click http://evil-phish.example.com to verify.",
+            "timestamp": int(time.time() * 1000),
+        },
+        "conversationHistory": [],
+        "metadata": {"channel": "SMS", "language": "English", "locale": "IN"},
+    }
+    try:
+        r = httpx.post(f"{BASE}/", json=body_extract, headers=headers, timeout=None)
+        r.raise_for_status()
+        out_extract = r.json()
+        print("   OK:", out_extract)
+        if out_extract.get("reply"):
+            print("   Reply:", out_extract["reply"][:80] + "..." if len(out_extract.get("reply", "")) > 80 else out_extract.get("reply", ""))
+        print("   (Check server logs for callback_sent + extracted_intelligence_summary: bankAccounts, upiIds, etc.)")
+    except httpx.HTTPStatusError as e:
+        print("   FAIL:", e)
+        print("   Status:", e.response.status_code)
+        print("   Body:", e.response.text)
+        try:
+            print("   Detail:", e.response.json())
+        except Exception:
+            pass
+        return 1
+    except Exception as e:
+        print("   FAIL:", e)
+        return 1
+
+    print("\n5. POST / (no scam - expect empty reply)")
     body_safe = {
         "sessionId": "test-session-002",
-        "message": {"sender": "other", "text": "Hey, are we still meeting tomorrow?", "timestamp": 1770005528731},
+        "message": {"sender": "other", "text": "Hey, are we still meeting tomorrow?", "timestamp": int(time.time() * 1000)},
         "conversationHistory": [],
         "metadata": {"channel": "WhatsApp", "language": "English", "locale": "IN"},
     }
     try:
-        r = httpx.post(f"{BASE}/", json=body_safe, headers=headers, timeout=10)
+        r = httpx.post(f"{BASE}/", json=body_safe, headers=headers, timeout=None)
         r.raise_for_status()
         out3 = r.json()
         print("   OK:", out3)

@@ -25,7 +25,7 @@ def send_guvi_callback(
         "agentNotes": agent_notes,
     }
     try:
-        with httpx.Client(timeout=15.0) as client:
+        with httpx.Client(timeout=None) as client:
             r = client.post(settings.guvi_callback_url, json=body)
             ok = 200 <= r.status_code < 300
             if ok:
@@ -33,7 +33,16 @@ def send_guvi_callback(
                     "callback_sent",
                     extra={
                         "status_code": r.status_code,
+                        "scam_detected": scam_detected,
                         "total_messages_exchanged": total_messages_exchanged,
+                        "agent_notes": agent_notes,
+                        "extracted_intelligence": {
+                            "bank_accounts": list(extracted_intelligence.bank_accounts),
+                            "upi_ids": list(extracted_intelligence.upi_ids),
+                            "phishing_links": list(extracted_intelligence.phishing_links),
+                            "phone_numbers": list(extracted_intelligence.phone_numbers),
+                            "suspicious_keywords": list(extracted_intelligence.suspicious_keywords),
+                        },
                     },
                 )
             else:

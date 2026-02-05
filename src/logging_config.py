@@ -21,6 +21,14 @@ LOG_LEVELS = {"DEBUG": logging.DEBUG, "INFO": logging.INFO, "WARNING": logging.W
 class JsonFormatter(logging.Formatter):
     """Format log records as single-line JSON for production (ELK, Datadog, etc.)."""
 
+    # Standard LogRecord attributes to exclude from extra fields
+    _STANDARD_ATTRS = frozenset((
+        "name", "msg", "args", "created", "filename", "funcName", "levelname", "levelno",
+        "lineno", "module", "msecs", "pathname", "process", "processName", "relativeCreated",
+        "stack_info", "exc_info", "message", "taskName", "extra_fields",
+        "thread", "threadName", "exc_text", "sinfo",
+    ))
+
     def format(self, record: logging.LogRecord) -> str:
         payload: dict[str, Any] = {
             "timestamp": self.formatTime(record, self.datefmt or "%Y-%m-%dT%H:%M:%S.000Z"),
@@ -37,16 +45,24 @@ class JsonFormatter(logging.Formatter):
         session_id = _session_id_ctx.get()
         if session_id:
             payload["session_id"] = session_id
-        # Extra fields passed via logger.info(..., extra={...})
-        if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
-            for k, v in record.extra_fields.items():
-                if k not in payload:
-                    payload[k] = v
+        # Extract extra fields directly from record.__dict__ at format time
+        # This captures extras passed via logger.info(..., extra={...})
+        for k, v in record.__dict__.items():
+            if k not in self._STANDARD_ATTRS and k not in payload:
+                payload[k] = v
         return json.dumps(payload, default=str)
 
 
 class ConsoleFormatter(logging.Formatter):
     """Human-readable format for local development."""
+
+    # Standard LogRecord attributes to exclude from extra fields
+    _STANDARD_ATTRS = frozenset((
+        "name", "msg", "args", "created", "filename", "funcName", "levelname", "levelno",
+        "lineno", "module", "msecs", "pathname", "process", "processName", "relativeCreated",
+        "stack_info", "exc_info", "message", "taskName", "extra_fields",
+        "thread", "threadName", "exc_text", "sinfo",
+    ))
 
     def format(self, record: logging.LogRecord) -> str:
         base = super().format(record)
@@ -57,8 +73,9 @@ class ConsoleFormatter(logging.Formatter):
         session_id = _session_id_ctx.get()
         if session_id:
             extras.append(f"session_id={session_id}")
-        if hasattr(record, "extra_fields") and isinstance(record.extra_fields, dict):
-            for k, v in record.extra_fields.items():
+        # Extract extra fields directly from record.__dict__ at format time
+        for k, v in record.__dict__.items():
+            if k not in self._STANDARD_ATTRS:
                 extras.append(f"{k}={v}")
         if extras:
             base += " | " + " ".join(extras)

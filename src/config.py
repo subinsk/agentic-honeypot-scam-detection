@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    api_secret_key: str = "change-me-in-production"
+    api_secret_key: str
     guvi_callback_url: str = "https://hackathon.guvi.in/api/updateHoneyPotFinalResult"
 
     # LLM: per-provider arrays (comma-separated). Try order: Groq keys, then OpenRouter, then GitHub, etc.
@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     ollama_base_url: str = ""
     llm_model: str = ""
     llm_base_url: str | None = None
+    # When True, use ONLY local Ollama (ignore Groq, OpenRouter, etc.). Good for dev without API keys.
+    use_local_llm_only: bool = False
+    # Speed optimization: disable slow LLM confirmation in scam detection (heuristics only). Faster for production.
+    disable_scam_llm_confirm: bool = False
 
     # Optional: path to file with extra scam keywords (one word/phrase per line). Used by scam_detection.
     scam_keywords_file: str = ""

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"d:\\\\projects\\\\agentic-honeypot-scam-detection\\\\logs\" mkdir \"d:\\\\projects\\\\agentic-honeypot-scam-detection\\\\logs\")",
+      "Bash(ngrok http:*)",
+      "Bash(timeout:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(winget install:*)",
+      "Bash(cloudflared tunnel:*)"
+    ]
+  }
+}

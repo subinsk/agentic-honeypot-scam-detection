@@ -102,7 +102,9 @@ def detect_scam_intent(
     )
 
     # Option 3: LLM confirmation when heuristics flag scam (reduces false positives)
-    if has_llm_configured() and is_scam:
+    # Can disable for production speed (set DISABLE_SCAM_LLM_CONFIRM=true)
+    disable_llm_confirm = getattr(settings, "disable_scam_llm_confirm", False)
+    if has_llm_configured() and is_scam and not disable_llm_confirm:
         if not _llm_confirm_scam(full_text):
             is_scam = False
             score = min(score, 0.25)  # lower confidence when LLM disagrees

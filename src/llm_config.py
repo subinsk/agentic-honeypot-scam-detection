@@ -53,14 +53,15 @@ DEFAULT_BASE_URLS = {
 }
 
 # Free-tier / local defaults
+# For local testing: deepseek-r1:8b (default), llama3, llama3.2; override with LLM_MODEL
 DEFAULT_MODELS = {
-    LLMProvider.OLLAMA: "llama3.2",  # Common local model; override with LLM_MODEL
+    LLMProvider.OLLAMA: "deepseek-r1:8b",  # reasoning model; or llama3, llama3.2
     LLMProvider.OPENAI: "gpt-4o-mini",
     LLMProvider.CLAUDE: "meta-llama/llama-3.3-70b-instruct:free",   # Free via OpenRouter
     LLMProvider.GROK: "grok-2-latest",
     LLMProvider.GEMINI: "google/gemini-2.0-flash-exp:free",         # Free via OpenRouter
     LLMProvider.GITHUB: "openai/gpt-4o",                             # Free for prototyping
-    LLMProvider.GROQ: "meta-llama/llama-4-scout-17b-16e-instruct",   # Free open-weights
+    LLMProvider.GROQ: "llama-3.3-70b-versatile",   # Free, fast, high quality (best for hackathon)
     LLMProvider.OPENROUTER: "meta-llama/llama-3.3-70b-instruct:free",
     LLMProvider.DEEPSEEK: "deepseek-chat",
 }
@@ -104,16 +105,23 @@ def get_configured_providers_in_priority() -> list[tuple[LLMProvider, LLMClientC
     """
     Return (provider, config) in priority order. Ollama is added first when OLLAMA_BASE_URL is set
     (no API key). Other providers require at least one key. Each entry is tried in turn until one succeeds.
+    When USE_LOCAL_LLM_ONLY=true, only Ollama is used (no cloud APIs).
     """
     out: list[tuple[LLMProvider, LLMClientConfig]] = []
+    use_local_only = getattr(settings, "use_local_llm_only", False)
+
     # Ollama: enabled by OLLAMA_BASE_URL only (no key)
     ollama_url = (getattr(settings, "ollama_base_url", None) or "").strip()
     if ollama_url:
         base = ollama_url.rstrip("/")
         if not base.endswith("/v1"):
             base = f"{base}/v1" if base else "http://localhost:11434/v1"
-        model = getattr(settings, "llm_model", None) or DEFAULT_MODELS.get(LLMProvider.OLLAMA) or "llama3.2"
+        model = getattr(settings, "llm_model", None) or DEFAULT_MODELS.get(LLMProvider.OLLAMA) or "deepseek-r1:8b"
         out.append((LLMProvider.OLLAMA, LLMClientConfig(api_key="ollama", base_url=base, model=model)))
+
+    if use_local_only:
+        return out
+
     for provider in PROVIDER_PRIORITY:
         if provider == LLMProvider.OLLAMA:
             continue
