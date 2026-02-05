@@ -7,16 +7,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ENV_FILE = PROJECT_ROOT / ".env"
 
-if not ENV_FILE.exists():
-    raise FileNotFoundError(
-        f".env file not found at {ENV_FILE}. "
-        "Copy .env.example to .env and set API_SECRET_KEY (and optionally an LLM provider key)."
-    )
-
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=str(ENV_FILE),
+        env_file=str(ENV_FILE) if ENV_FILE.exists() else None,
         env_file_encoding="utf-8",
         extra="ignore",
     )
